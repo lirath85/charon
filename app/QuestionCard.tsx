@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import ApprovalDeadline from './ApprovalDeadline';
 import { isQuestionCollapsed, setQuestionCollapsed } from './questionCollapse';
 
@@ -24,17 +24,9 @@ type Props = {
 // answer in the textarea (which overrides the click).
 // The return is { question_text: "label1, label2" } or { question_text: "free text" }.
 export default function QuestionCard({ questions, sessionId, questionId, expiresAt, onAnswer, onCancel }: Props) {
+  // The call site keys this card by question id, so the initializer runs
+  // once per question and needs no resync.
   const [collapsed, setCollapsedState] = useState(() => isQuestionCollapsed(sessionId, questionId));
-  // The card is not keyed by question id at its call site, so a NEW question
-  // can land on this same instance. Re-read the store when that happens, or
-  // the previous question's minimized state would carry over to it.
-  const lastSidRef = useRef(sessionId);
-  const lastQidRef = useRef(questionId);
-  if (lastSidRef.current !== sessionId || lastQidRef.current !== questionId) {
-    lastSidRef.current = sessionId;
-    lastQidRef.current = questionId;
-    setCollapsedState(isQuestionCollapsed(sessionId, questionId));
-  }
   const setCollapsed = useCallback((value: boolean) => {
     setCollapsedState(value);
     setQuestionCollapsed(sessionId, questionId, value);
