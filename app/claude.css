@@ -3418,6 +3418,8 @@
   font-family: var(--body); font-size: 12px; color: var(--text-muted);
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.uq-card-head,
+.user-question-card.collapsed { cursor: pointer; }
 .user-question-card.collapsed .uq-card-head { margin-bottom: 0; }
 .user-question-card.collapsed .uq-body,
 .user-question-card.collapsed .uq-actions { display: none; }

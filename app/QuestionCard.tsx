@@ -78,12 +78,18 @@ export default function QuestionCard({ questions, sessionId, questionId, expires
   const peek = (questions[0]?.header ?? questions[0]?.question ?? '').trim();
 
   return (
-    <div className={`user-question-card${collapsed ? ' collapsed' : ''}`}>
-      <header className="uq-card-head">
+    // Click targets mirror the tool-use card: the whole header minimizes, and
+    // a minimized card restores from a click anywhere on it. The button has
+    // no handler of its own; its click (mouse or Enter/Space) bubbles to
+    // whichever of the two handlers is live, so keyboard users get both.
+    <div
+      className={`user-question-card${collapsed ? ' collapsed' : ''}`}
+      onClick={collapsed ? () => setCollapsed(false) : undefined}
+    >
+      <header className="uq-card-head" onClick={collapsed ? undefined : () => setCollapsed(true)}>
         <button
           type="button"
           className="uq-toggle"
-          onClick={() => setCollapsed(!collapsed)}
           aria-expanded={!collapsed}
           aria-label={`${collapsed ? 'expand' : 'minimize'} question`}
         >
