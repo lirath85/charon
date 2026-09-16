@@ -1,5 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import ApprovalDeadline from './ApprovalDeadline';
+import { isQuestionCollapsed, setQuestionCollapsed } from './questionCollapse';
 
 export type QuestionItem = {
   question: string;
@@ -10,6 +12,9 @@ export type QuestionItem = {
 
 type Props = {
   questions: QuestionItem[];
+  sessionId: string;
+  questionId: string;
+  expiresAt?: number;
   onAnswer: (answers: Record<string, string>) => void;
   onCancel: () => void;
 };
@@ -18,7 +23,23 @@ type Props = {
 // the user clicks an option (or several if multiSelect), OR types a free
 // answer in the textarea (which overrides the click).
 // The return is { question_text: "label1, label2" } or { question_text: "free text" }.
-export default function QuestionCard({ questions, onAnswer, onCancel }: Props) {
+export default function QuestionCard({ questions, sessionId, questionId, expiresAt, onAnswer, onCancel }: Props) {
+  const [collapsed, setCollapsedState] = useState(() => isQuestionCollapsed(sessionId, questionId));
+  // The card is not keyed by question id at its call site, so a NEW question
+  // can land on this same instance. Re-read the store when that happens, or
+  // the previous question's minimized state would carry over to it.
+  const lastSidRef = useRef(sessionId);
+  const lastQidRef = useRef(questionId);
+  if (lastSidRef.current !== sessionId || lastQidRef.current !== questionId) {
+    lastSidRef.current = sessionId;
+    lastQidRef.current = questionId;
+    setCollapsedState(isQuestionCollapsed(sessionId, questionId));
+  }
+  const setCollapsed = useCallback((value: boolean) => {
+    setCollapsedState(value);
+    setQuestionCollapsed(sessionId, questionId, value);
+  }, [sessionId, questionId]);
+
   const [selections, setSelections] = useState<Record<number, Set<string>>>(() => {
     const init: Record<number, Set<string>> = {};
     questions.forEach((_, i) => { init[i] = new Set(); });
@@ -60,12 +81,31 @@ export default function QuestionCard({ questions, onAnswer, onCancel }: Props) {
     onAnswer(answers);
   }
 
+  // Enough of the question to recognise it while minimized, without which the
+  // collapsed strip is just an anonymous bar.
+  const peek = (questions[0]?.header ?? questions[0]?.question ?? '').trim();
+
   return (
-    <div className="user-question-card">
+    <div className={`user-question-card${collapsed ? ' collapsed' : ''}`}>
       <header className="uq-card-head">
-        <span className="uq-tag">❓ question{questions.length > 1 ? `s × ${questions.length}` : ''}</span>
-        <span className="uq-sub">choose an option or write your own answer</span>
+        <button
+          type="button"
+          className="uq-toggle"
+          onClick={() => setCollapsed(!collapsed)}
+          aria-expanded={!collapsed}
+          aria-label={`${collapsed ? 'expand' : 'minimize'} question`}
+        >
+          <span className="uq-caret" aria-hidden>{collapsed ? '▸' : '▾'}</span>
+          <span className="uq-tag">❓ question{questions.length > 1 ? `s × ${questions.length}` : ''}</span>
+        </button>
+        {collapsed
+          ? <span className="uq-peek" title={peek}>{peek}</span>
+          : <span className="uq-sub">choose an option or write your own answer</span>}
       </header>
+      {/* Deliberately OUTSIDE the collapsed region: a minimized question still
+          auto-denies on the provider's timer, so hiding the countdown is how
+          you lose one without noticing. */}
+      <ApprovalDeadline expiresAt={expiresAt} />
       <div className="uq-body">
         {questions.map((q, qIdx) => {
           const multi = !!q.multiSelect;

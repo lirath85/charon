@@ -985,6 +985,9 @@ export default function ClaudeSessionView({
             {oldestPending.kind === 'question' && (
               <QuestionCard
                 questions={oldestPending.q.questions}
+                sessionId={oldestPending.q.sessionId}
+                questionId={oldestPending.q.id}
+                expiresAt={oldestPending.q.expiresAt}
                 onAnswer={(answers) => respondQuestion(oldestPending.q.id, answers)}
                 onCancel={() => respondQuestion(oldestPending.q.id, null)}
               />
